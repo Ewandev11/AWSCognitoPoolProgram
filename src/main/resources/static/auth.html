@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Auth - Login / Signup</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f7fa;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button.signup {
+      background: #28a745;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    .toggle {
+      text-align: center;
+      margin-top: 15px;
+    }
+    .toggle a {
+      color: #007bff;
+      text-decoration: none;
+    }
+    .message {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .error { background: #f8d7da; color: #721c24; }
+    .success { background: #d4edda; color: #155724; }
+    .hidden { display: none; }
+    .dashboard {
+      text-align: center;
+    }
+    .dashboard button {
+      background: #dc3545;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Form -->
+  <div id="loginSection" class="container">
+    <h2>Login</h2>
+    <div id="loginMessage" class="message hidden"></div>
+    <form id="loginForm">
+      <div class="form-group">
+        <input type="email" id="loginEmail" placeholder="Email" required />
+      </div>
+      <div class="form-group">
+        <input type="password" id="loginPassword" placeholder="Password" required />
+      </div>
+      <button type="submit">Login</button>
+    </form>
+    <div class="toggle">
+      Don't have an account? <a href="#" id="showSignup">Sign Up</a>
+    </div>
+  </div>
+
+  <!-- Signup Form -->
+  <div id="signupSection" class="container hidden">
+    <h2>Sign Up</h2>
+    <div id="signupMessage" class="message hidden"></div>
+    <form id="signupForm">
+      <div class="form-group">
+        <input type="text" id="signupName" placeholder="Full Name" required />
+      </div>
+      <div class="form-group">
+        <input type="email" id="signupEmail" placeholder="Email" required />
+      </div>
+      <div class="form-group">
+        <input type="password" id="signupPassword" placeholder="Password" required />
+      </div>
+      <button type="submit" class="signup">Create Account</button>
+    </form>
+    <div class="toggle">
+      Already have an account? <a href="#" id="showLogin">Login</a>
+    </div>
+  </div>
+
+  <!-- Dashboard View (shown after login) -->
+  <div id="dashboardSection" class="container hidden">
+    <div class="dashboard">
+      <h2>✅ Welcome!</h2>
+      <p>You are logged in.</p>
+      <p><strong>Token preview:</strong></p>
+      <p id="tokenPreview" style="font-size:12px; word-break:break-all;"></p>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <script>
+    // DOM Elements
+    const loginSection = document.getElementById('loginSection');
+    const signupSection = document.getElementById('signupSection');
+    const dashboardSection = document.getElementById('dashboardSection');
+    const showSignupLink = document.getElementById('showSignup');
+    const showLoginLink = document.getElementById('showLogin');
+
+    // Toggle between login and signup
+    showSignupLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      loginSection.classList.add('hidden');
+      signupSection.classList.remove('hidden');
+      document.getElementById('signupMessage').classList.add('hidden');
+    });
+
+    showLoginLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      signupSection.classList.add('hidden');
+      loginSection.classList.remove('hidden');
+      document.getElementById('loginMessage').classList.add('hidden');
+    });
+
+    // Check if already logged in
+    function checkAuth() {
+      const token = localStorage.getItem('token');
+      if (token) {
+        showDashboard(token);
+      }
+    }
+
+    // Show dashboard
+    function showDashboard(token) {
+      loginSection.classList.add('hidden');
+      signupSection.classList.add('hidden');
+      dashboardSection.classList.remove('hidden');
+      document.getElementById('tokenPreview').textContent = token.substring(0, 60) + '...';
+    }
+
+    // Logout
+    function logout() {
+      localStorage.removeItem('token');
+      dashboardSection.classList.add('hidden');
+      loginSection.classList.remove('hidden');
+    }
+
+    // Login form submit
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const msg = document.getElementById('loginMessage');
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          localStorage.setItem('token', data.token);
+          showDashboard(data.token);
+        } else {
+          msg.textContent = 'Invalid email or password';
+          msg.className = 'message error';
+          msg.classList.remove('hidden');
+        }
+      } catch (err) {
+        msg.textContent = 'Network error. Is the backend running?';
+        msg.className = 'message error';
+        msg.classList.remove('hidden');
+      }
+    });
+
+    // Signup form submit
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('signupName').value;
+      const email = document.getElementById('signupEmail').value;
+      const password = document.getElementById('signupPassword').value;
+      const msg = document.getElementById('signupMessage');
+
+      try {
+        const res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password })
+        });
+
+        if (res.ok) {
+          msg.textContent = 'Account created! Redirecting to login...';
+          msg.className = 'message success';
+          msg.classList.remove('hidden');
+          setTimeout(() => {
+            signupSection.classList.add('hidden');
+            loginSection.classList.remove('hidden');
+            msg.classList.add('hidden');
+            document.getElementById('loginEmail').value = email;
+          }, 2000);
+        } else {
+          const errText = await res.text();
+          msg.textContent = errText || 'Signup failed';
+          msg.className = 'message error';
+          msg.classList.remove('hidden');
+        }
+      } catch (err) {
+        msg.textContent = 'Network error. Is the backend running?';
+        msg.className = 'message error';
+        msg.classList.remove('hidden');
+      }
+    });
+
+    // Initialize
+    checkAuth();
+  </script>
+</body>
+</html> 
